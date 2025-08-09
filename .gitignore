@@ -1,0 +1,56 @@
+/bin/
+/out/
+/build/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+
+# Fetched dependencies
+/libs/glfw/
+/libs/glm/
+/libs/glad/
+/libs/third_party/
+
+# IDE files
+/.vs/
+/.idea/
+CMakeSettings.json
+
+# CMake-generated files(if ever generated inside src)
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+
+*.pdb
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
