@@ -289,6 +289,7 @@ public:
 	void GameOver()
 	{
 		_gameState = GameState::GAME_OVER;
+		_isRunning = false;
 	}
 
 	void Restart()
@@ -307,8 +308,8 @@ public:
 
 		if (moveTimer >= 0.35)
 		{
-			if (Move(_currentDirection, _gameState))
-				_isRunning = true;
+			if (!Move(_currentDirection, _gameState))
+				_isRunning = false;
 
 			moveTimer = 0.0;
 		}
