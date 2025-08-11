@@ -42,7 +42,7 @@ enum class GameState
 class Snake
 {
 private:
-	Position _pos;
+	Position _pos = { 1, 1 };
 
 public:
 	explicit Snake(const Position& pos) : _pos{ pos } {};
@@ -92,6 +92,7 @@ class Map
 private:
 	std::vector<std::string> _map;
 	std::vector<std::string> _gameOverMap;
+	std::vector<std::string> _gameMenuMap;
 
 public:
 	explicit Map()
@@ -124,6 +125,34 @@ public:
 			"###########################################################"
 		};
 
+		_gameMenuMap = {
+			"###########################################################",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                  PRESS P to START GAME                  #",
+			"#                        Q to QUIT                        #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"#                                                         #",
+			"###########################################################"
+		};
+
 		_gameOverMap = {
 			"###########################################################",
 			"#                                                         #",
@@ -136,7 +165,7 @@ public:
 			"#                                                         #",
 			"#                                                         #",
 			"#                        GAME OVER                        #",
-			"#                                                         #",
+			"#                   Press R to restart                    #",
 			"#                                                         #",
 			"#                                                         #",
 			"#                                                         #",
@@ -163,14 +192,19 @@ public:
 		return _gameOverMap;
 	}
 
+	std::vector<std::string> GetGameMenuMap()
+	{
+		return _gameMenuMap;
+	}
+
 	const int GetWidth() const
 	{
-		return _map[0].size();
+		return static_cast<int>(_map[0].size());
 	}
 
 	const int GetHeight() const
 	{
-		return _map.size();
+		return static_cast<int>(_map.size());
 	}
 };
 
@@ -180,26 +214,32 @@ public:
 class Game
 {
 private:
-	Direction _currentDirection;
+	Map _map;
 	GameState _gameState;
 	Snake _snake;
-	Map _map;
 
+	Direction _currentDirection;
 	double _deltaTime;
 	bool _isRunning = true;
 
 public:
-	explicit Game() : _snake{ { 5, 10 } }, _currentDirection{ Direction::NONE }, _gameState{ GameState::PAUSE }
+	explicit Game() : _snake{ RandomPosition() }, _currentDirection{ Direction::NONE }, _gameState{ GameState::PAUSE }
 	{
 		_deltaTime = GetDeltaTime();
+
+		if (!CheckBounds(_snake.GetPosition()))
+		{
+			std::cerr << "Not gud position\n";
+			_snake.SetPosition({ 2, 10 });
+		}
 	}
 
 	bool CheckBounds(const Position& pos)
 	{
-		if (pos.x <= 0 || pos.x > _map.GetWidth() - 1)
+		if (pos.x < 1 || pos.x > _map.GetWidth() - 2)
 			return false;
 
-		if (pos.y <= 0 || pos.y > _map.GetHeight() - 1)
+		if (pos.y < 1 || pos.y > _map.GetHeight() - 2)
 			return false;
 
 		return true;
@@ -208,13 +248,12 @@ public:
 	Position RandomPosition()
 	{
 		std::random_device dev;
+		std::mt19937 rng(dev());
+
 		std::uniform_int_distribution<int> distX(1, _map.GetWidth() - 2);
-		int x = distX(dev);
-
 		std::uniform_int_distribution<int> distY(1, _map.GetHeight() - 2);
-		int y = distY(dev);
 
-		return { x, y };
+		return { distX(rng), distY(rng) };
 	}
 
 	bool IsOppositeDirection(Direction curr, Direction newDir)
@@ -304,7 +343,7 @@ public:
 	void RestartGame()
 	{
 		_currentDirection = Direction::NONE;
-		_snake.SetPosition({ 5, 10 });
+		_snake.SetPosition(RandomPosition());
 	}
 
 	void UpdateGameplay(double dt)
@@ -331,6 +370,7 @@ public:
 			UpdateGameplay(dt);
 			break;
 		case GameState::PAUSE:
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			break;
 		case GameState::GAME_OVER:
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -353,8 +393,16 @@ public:
 			for (auto& line : _map.GetGameOverMap())
 				buffer += line + '\n';
 		}
+		else if (_gameState == GameState::PAUSE)
+		{
+			for (auto& line : _map.GetGameMenuMap())
+				buffer += line + '\n';
+		}
 		else
 		{
+			buffer += "Snake pos: (" + std::to_string(_snake.GetPosition().x)
+			+ "," + std::to_string(_snake.GetPosition().y) + ")\n";
+
 			for (int y = 0; y < _map.GetHeight(); y++)
 			{
 				for (int x = 0; x < _map.GetWidth(); x++)
