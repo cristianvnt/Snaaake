@@ -23,6 +23,7 @@ struct Position
 
 enum class Direction
 {
+	NONE,
 	UP,
 	DOWN,
 	LEFT,
@@ -188,7 +189,7 @@ private:
 	bool _isRunning = true;
 
 public:
-	explicit Game() : _snake{ { 5, 10 } }, _currentDirection{ Direction::UP }, _gameState{ GameState::PAUSE }
+	explicit Game() : _snake{ { 5, 10 } }, _currentDirection{ Direction::NONE }, _gameState{ GameState::PAUSE }
 	{
 		_deltaTime = GetDeltaTime();
 	}
@@ -216,24 +217,34 @@ public:
 		return { x, y };
 	}
 
+	bool IsOppositeDirection(Direction curr, Direction newDir)
+	{
+		return (curr == Direction::UP && newDir == Direction::DOWN ||
+			curr == Direction::LEFT && newDir == Direction::RIGHT ||
+			curr == Direction::DOWN && newDir == Direction::UP ||
+			curr == Direction::RIGHT && newDir == Direction::LEFT);
+	}
+
 	void ProcessInput()
 	{
 		if (_kbhit())
 		{
 			char input = _getch();
+			Direction newDirection = _currentDirection;
+
 			switch (input)
 			{
 			case 'w':
-				_currentDirection = Direction::UP;
+				newDirection = Direction::UP;
 				break;
 			case 's':
-				_currentDirection = Direction::DOWN;
+				newDirection = Direction::DOWN;
 				break;
 			case 'a':
-				_currentDirection = Direction::LEFT;
+				newDirection = Direction::LEFT;
 				break;
 			case 'd':
-				_currentDirection = Direction::RIGHT;
+				newDirection = Direction::RIGHT;
 				break;
 			case 'p':
 				_gameState = (_gameState == GameState::PLAYING ? GameState::PAUSE : GameState::PLAYING);
@@ -242,9 +253,12 @@ public:
 				_isRunning = false;
 				break;
 			case 'r':
-				_isRunning = true;
+				_gameState = GameState::RESTART;
 				break;
 			}
+
+			if (!IsOppositeDirection(_currentDirection, newDirection))
+				_currentDirection = newDirection;
 		}
 	}
 
@@ -253,15 +267,11 @@ public:
 		return _isRunning; 
 	}
 
-	bool Move(Direction dir, GameState gs)
+	bool Move(Direction dir)
 	{
-		if (gs == GameState::PAUSE)
-			return true;
-
 		if (!CheckBounds(_snake.GetPosition()))
 		{
 			_gameState = GameState::GAME_OVER;
-			GameOver();
 			return true;
 		}
 
@@ -289,29 +299,48 @@ public:
 	void GameOver()
 	{
 		_gameState = GameState::GAME_OVER;
-		_isRunning = false;
 	}
 
-	void Restart()
+	void RestartGame()
 	{
+		_currentDirection = Direction::NONE;
 		_snake.SetPosition({ 5, 10 });
-		_gameState = GameState::PAUSE;
-		_currentDirection = Direction::UP;
+	}
+
+	void UpdateGameplay(double dt)
+	{
+		static double moveTimer = 0.0;
+		moveTimer += dt;
+
+		if (moveTimer >= 0.15)
+		{
+			if (!Move(_currentDirection))
+				_gameState = GameState::GAME_OVER;
+
+			moveTimer = 0.0;
+		}
 	}
 
 	void Update()
 	{
 		double dt = GetDeltaTime();
 		
-		static double moveTimer = 0.0;
-		moveTimer += dt;
-
-		if (moveTimer >= 0.35)
+		switch (_gameState)
 		{
-			if (!Move(_currentDirection, _gameState))
-				_isRunning = false;
-
-			moveTimer = 0.0;
+		case GameState::PLAYING:
+			UpdateGameplay(dt);
+			break;
+		case GameState::PAUSE:
+			break;
+		case GameState::GAME_OVER:
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			break;
+		case GameState::RESTART:
+			RestartGame();
+			_gameState = GameState::PAUSE;
+			break;
+		default:
+			break;
 		}
 	}
 
