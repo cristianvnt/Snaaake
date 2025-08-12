@@ -8,6 +8,7 @@
 
 #pragma region DECLARATIONS
 constexpr double TARGET_FRAME_TIME = 1.0 / 60.0;
+constexpr int HEAD = 0;
 
 struct Position;
 class Snake;
@@ -42,45 +43,69 @@ enum class GameState
 class Snake
 {
 private:
-	Position _pos = { 1, 1 };
+	std::vector<Position> _pos;
 
 public:
-	explicit Snake(const Position& pos) : _pos{ pos } {};
+	explicit Snake(const std::vector<Position>& pos) : _pos{ pos } {}
 
-	const Position GetPosition() const
+	Position GetHead()
+	{
+		return _pos.front();
+	}
+
+	Position GetTail()
+	{
+		return _pos.back();
+	}
+
+	void RemoveTail()
+	{
+		_pos.pop_back();
+	}
+
+	void ResetPositions()
+	{
+		if (!_pos.empty())
+			_pos.clear();
+	}
+
+	const std::vector<Position> GetAllPositions() const
 	{
 		return _pos;
 	}
 
-	void SetPosition(const Position& pos)
+	Position GetPosition(int p)
 	{
-		_pos.x = pos.x;
-		_pos.y = pos.y;
+		return _pos[p];
 	}
 
-	friend std::ostream& Snake::operator<<(std::ostream& os, const Snake& s)
+	void SetAllPositions(const std::vector<Position>& pos)
 	{
-		return os << "Snake - x: " << s._pos.x << ", y: " << s._pos.y;
+		_pos = pos;
 	}
 
-	void MoveUp()
+	void SetHeadPosition(const Position pos)
 	{
-		_pos.y -= 1;
+		_pos[HEAD].x = pos.x;
+		_pos[HEAD].y = pos.y;
 	}
 
-	void MoveDown()
+	void SetBodyPositions(const std::vector<Position>& pos)
 	{
-		_pos.y += 1;
+		for (auto& bp : pos)
+			_pos.push_back(bp);
 	}
 
-	void MoveLeft()
+	void SetPosition(int p, const Position pos)
 	{
-		_pos.x -= 1;
+		_pos[p].x = pos.x;
+		_pos[p].y = pos.y;
 	}
 
-	void MoveRight()
+	void Move()
 	{
-		_pos.x += 1;
+		for (size_t i = _pos.size() - 1; i > 0; i--)
+			_pos[i] = _pos[i - 1];
 	}
 };
 
@@ -219,27 +244,35 @@ private:
 	Snake _snake;
 
 	Direction _currentDirection;
-	double _deltaTime;
 	bool _isRunning = true;
+	Position _oldTailPosition{};
 
 public:
-	explicit Game() : _snake{ RandomPosition() }, _currentDirection{ Direction::NONE }, _gameState{ GameState::PAUSE }
+	explicit Game() : _snake{ {{2, 10}, {2, 11}} }, _currentDirection{ Direction::NONE }, _gameState{ GameState::PAUSE }
 	{
-		_deltaTime = GetDeltaTime();
-
-		if (!CheckBounds(_snake.GetPosition()))
+		if (!CheckBounds(_snake.GetPosition(HEAD)))
 		{
 			std::cerr << "Not gud position\n";
-			_snake.SetPosition({ 2, 10 });
+			_snake.SetAllPositions({ {2, 10}, {2, 11} });
 		}
+	}
+
+	Direction RandomDirection()
+	{
+		std::random_device dev;
+		std::mt19937 rng(dev());
+
+		std::uniform_int_distribution<int> distrib(static_cast<int>(Direction::UP), static_cast<int>(Direction::RIGHT));
+
+		return static_cast<Direction>(distrib(rng));
 	}
 
 	bool CheckBounds(const Position& pos)
 	{
-		if (pos.x < 1 || pos.x > _map.GetWidth() - 2)
+		if (pos.x < 2 || pos.x > _map.GetWidth() - 3)
 			return false;
 
-		if (pos.y < 1 || pos.y > _map.GetHeight() - 2)
+		if (pos.y < 2 || pos.y > _map.GetHeight() - 3)
 			return false;
 
 		return true;
@@ -250,8 +283,8 @@ public:
 		std::random_device dev;
 		std::mt19937 rng(dev());
 
-		std::uniform_int_distribution<int> distX(1, _map.GetWidth() - 2);
-		std::uniform_int_distribution<int> distY(1, _map.GetHeight() - 2);
+		std::uniform_int_distribution<int> distX(2, _map.GetWidth() - 3);
+		std::uniform_int_distribution<int> distY(2, _map.GetHeight() - 3);
 
 		return { distX(rng), distY(rng) };
 	}
@@ -306,33 +339,36 @@ public:
 		return _isRunning; 
 	}
 
-	bool Move(Direction dir)
+	void Move()
 	{
-		if (!CheckBounds(_snake.GetPosition()))
+		if (!CheckBounds(_snake.GetPosition(HEAD)))
 		{
 			_gameState = GameState::GAME_OVER;
-			return true;
+			return;
 		}
 
-		switch (dir)
+		_snake.Move();
+
+		switch (_currentDirection)
 		{
 		case Direction::UP:
-			_snake.MoveUp();
+			_snake.SetPosition(HEAD, { _snake.GetPosition(HEAD).x, _snake.GetPosition(HEAD).y - 1 });
 			break;
 		case Direction::DOWN:
-			_snake.MoveDown();
+			_snake.SetPosition(HEAD, { _snake.GetPosition(HEAD).x, _snake.GetPosition(HEAD).y + 1 });
 			break;
 		case Direction::LEFT:
-			_snake.MoveLeft();
+			_snake.SetPosition(HEAD, { _snake.GetPosition(HEAD).x - 1, _snake.GetPosition(HEAD).y });
 			break;
 		case Direction::RIGHT:
-			_snake.MoveRight();
+			_snake.SetPosition(HEAD, { _snake.GetPosition(HEAD).x + 1, _snake.GetPosition(HEAD).y });
 			break;
 		default:
 			break;
 		}
 
-		return true;
+		if (_snake.GetAllPositions().size() > 2)
+			_snake.RemoveTail();
 	}
 
 	void GameOver()
@@ -342,8 +378,12 @@ public:
 
 	void RestartGame()
 	{
+		_gameState = GameState::PAUSE;
 		_currentDirection = Direction::NONE;
-		_snake.SetPosition(RandomPosition());
+		_snake.ResetPositions();
+
+		Position headPos = RandomPosition();
+		_snake.SetAllPositions({ headPos, {headPos.x, headPos.y + 1} });
 	}
 
 	void UpdateGameplay(double dt)
@@ -353,97 +393,118 @@ public:
 
 		if (moveTimer >= 0.15)
 		{
-			if (!Move(_currentDirection))
-				_gameState = GameState::GAME_OVER;
-
+			_oldTailPosition = _snake.GetTail();
+			Move();
 			moveTimer = 0.0;
 		}
 	}
 
-	void Update()
+	void Update(double deltaTime)
 	{
-		double dt = GetDeltaTime();
-		
 		switch (_gameState)
 		{
 		case GameState::PLAYING:
-			UpdateGameplay(dt);
-			break;
+			return UpdateGameplay(deltaTime);
 		case GameState::PAUSE:
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-			break;
 		case GameState::GAME_OVER:
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-			break;
+			return;
 		case GameState::RESTART:
-			RestartGame();
-			_gameState = GameState::PAUSE;
-			break;
+			return RestartGame();
 		default:
-			break;
+			return;
 		}
+	}
+
+	void PrintMap(const std::vector<std::string>& map, std::string& buffer)
+	{
+		for (auto& line : map)
+			buffer += line + '\n';
 	}
 
 	void Render()
 	{
-		std::string buffer;
-		buffer += "\033[2J\033[H";
+		static bool initialDraw = true;
 		if (_gameState == GameState::GAME_OVER)
 		{
-			for (auto& line : _map.GetGameOverMap())
-				buffer += line + '\n';
+			std::string buffer;
+			buffer += "\033[2J\033[H";
+			PrintMap(_map.GetGameOverMap(), buffer);
+			std::cout << buffer << std::flush;
+			initialDraw = true;
+			return;
 		}
-		else if (_gameState == GameState::PAUSE)
+
+		if (_gameState == GameState::PAUSE)
 		{
-			for (auto& line : _map.GetGameMenuMap())
-				buffer += line + '\n';
+			std::string buffer;
+			buffer += "\033[2J\033[H";
+			PrintMap(_map.GetGameMenuMap(), buffer);
+			std::cout << buffer << std::flush;
+			initialDraw = true;
+			return;
+		}
+
+		if (initialDraw)
+		{
+			std::string buffer;
+			buffer += "\033[2J\033[H";
+			PrintMap(_map.GetMap(), buffer);
+			std::cout << buffer << std::flush;
+			for (int i = 0; i < _snake.GetAllPositions().size(); i++)
+				std::cout << "\033[" << _snake.GetPosition(i).y + 1 << ";" << _snake.GetPosition(i).x + 1 << "H" << (i == HEAD ? "S" : "T");
+			initialDraw = false;
+			std::cout << std::flush;
 		}
 		else
 		{
-			buffer += "Snake pos: (" + std::to_string(_snake.GetPosition().x)
-			+ "," + std::to_string(_snake.GetPosition().y) + ")\n";
+			// erase old tail position
+			if (_currentDirection != Direction::NONE)
+				std::cout << "\033[" << _oldTailPosition.y + 1 << ";" << _oldTailPosition.x + 1 << "H" << " ";
 
-			for (int y = 0; y < _map.GetHeight(); y++)
-			{
-				for (int x = 0; x < _map.GetWidth(); x++)
-				{
-					if (y == _snake.GetPosition().y && x == _snake.GetPosition().x)
-						buffer += 'S';
-					else
-						buffer += _map.GetMap()[y][x];
-				}
-				buffer += '\n';
-			}
+			for (int i = 1; i < _snake.GetAllPositions().size(); i++)
+				std::cout << "\033[" << _snake.GetPosition(1).y + 1 << ";" << _snake.GetPosition(1).x + 1 << "H" << "T";
+
+			std::cout << "\033[" << _snake.GetPosition(HEAD).y + 1 << ";" << _snake.GetPosition(HEAD).x + 1 << "H" << "S";
+			std::cout << std::flush;
 		}
-		std::cout << buffer << std::flush;
-	}
 
-	double GetDeltaTime()
-	{
-		static std::chrono::steady_clock::time_point lastTime = std::chrono::steady_clock::now();
-		std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
-		double dt = std::chrono::duration<double>(currentTime - lastTime).count();
-		lastTime = currentTime;
-		return dt;
+		// set cursor at the bottom to avoid text overwriting
+		std::cout << "\033[" << _map.GetHeight() + 2 << ";1H";
 	}
-
-	const void FPS() const
+	
+	void Run()
 	{
+		static auto lastTime = std::chrono::high_resolution_clock::now();
 		static int frameCount = 0;
 		static double timeAccumulated = 0.0;
 
-		timeAccumulated += _deltaTime;
-		frameCount++;
-
-		if (timeAccumulated >= 0.1f)
+		while (IsRunning())
 		{
-			std::cout << "\rFPS: " << static_cast<double>(frameCount) / timeAccumulated << std::flush;
+			auto currentTime = std::chrono::high_resolution_clock::now();
+			double deltaTime = std::chrono::duration<double>(currentTime - lastTime).count();
+			lastTime = currentTime;
 
-			frameCount = 0;
-			timeAccumulated = 0.0;
+			ProcessInput();
+			Update(deltaTime);
+			Render();
+
+			timeAccumulated += deltaTime;
+			frameCount++;
+
+			if (timeAccumulated >= 0.5)
+			{
+				std::cout << "\rFPS: " << static_cast<double>(frameCount) / timeAccumulated << std::flush;
+				frameCount = 0;
+				timeAccumulated = 0.0;
+			}
+
+			const auto elapsed = std::chrono::high_resolution_clock::now() - currentTime;
+			auto targetFrameTime = std::chrono::duration<double>(TARGET_FRAME_TIME);
+			if (elapsed < targetFrameTime)
+				std::this_thread::sleep_for(targetFrameTime - elapsed);
+
 		}
 	}
-
 };
 
 #pragma endregion
@@ -451,16 +512,5 @@ public:
 int main()
 {
 	Game game;
-
-	while (game.IsRunning())
-	{
-		game.ProcessInput();
-
-		game.Update();
-
-		game.Render();
-
-		game.FPS();
-	}
-
+	game.Run();
 }
