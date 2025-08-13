@@ -9,6 +9,7 @@
 #pragma region DECLARATIONS
 constexpr double TARGET_FRAME_TIME = 1.0 / 60.0;
 constexpr int HEAD = 0;
+constexpr int DEFAULT_SNAKE_LENGTH = 3;
 
 struct Position;
 class Snake;
@@ -24,7 +25,6 @@ struct Position
 
 enum class Direction
 {
-	NONE,
 	UP,
 	DOWN,
 	LEFT,
@@ -63,7 +63,7 @@ public:
 		_pos.pop_back();
 	}
 
-	void ResetPositions()
+	void ClearPositions()
 	{
 		if (!_pos.empty())
 			_pos.clear();
@@ -86,6 +86,12 @@ public:
 
 	void SetHeadPosition(const Position pos)
 	{
+		if (_pos.empty())
+		{
+			std::cerr << "Cant set snake head since there isnt one\n";
+			return;
+		}
+
 		_pos[HEAD].x = pos.x;
 		_pos[HEAD].y = pos.y;
 	}
@@ -122,89 +128,43 @@ private:
 public:
 	explicit Map()
 	{
-		_map = {
-			"###########################################################",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"###########################################################"
-		};
+		std::string border = "###########################################################";
+		std::string space = "#                                                         #";
+		_map.push_back(border);
+		for (int i = 0; i < 25; i++)
+			_map.push_back(space);
+		_map.push_back(border);
 
-		_gameMenuMap = {
-			"###########################################################",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                  PRESS P to START GAME                  #",
-			"#                        Q to QUIT                        #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"###########################################################"
-		};
 
-		_gameOverMap = {
-			"###########################################################",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                        GAME OVER                        #",
-			"#                   Press R to restart                    #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"#                                                         #",
-			"###########################################################"
-		};
+		std::string start = "#               PRESS ENTER to START GAME                 #";
+		std::string quit = "#                        Q to QUIT                        #";
+		_gameMenuMap.push_back(border);
+		for (int i = 0; i < 25; i++)
+		{
+			if (i == 10)
+			{
+				_gameMenuMap.push_back(start);
+				_gameMenuMap.push_back(quit);
+				continue;
+			}
+			_gameMenuMap.push_back(space);
+		}
+		_gameMenuMap.push_back(border);
+
+		std::string over = "#                        GAME OVER                        #";
+		std::string restart = "#                   Press R to restart                    #";
+		_gameOverMap.push_back(border);
+		for (int i = 0; i < 25; i++)
+		{
+			if (i == 10)
+			{
+				_gameOverMap.push_back(over);
+				_gameOverMap.push_back(restart);
+				continue;
+			}
+			_gameOverMap.push_back(space);
+		}
+		_gameOverMap.push_back(border);
 	}
 
 	std::vector<std::string> GetMap()
@@ -243,28 +203,21 @@ private:
 	GameState _gameState;
 	Snake _snake;
 
+	Direction _spawnDirection;
 	Direction _currentDirection;
-	bool _isRunning = true;
+	bool _hasFirstInput;
+
+	bool _isRunning;
 	Position _oldTailPosition{};
 
 public:
-	explicit Game() : _snake{ {{2, 10}, {2, 11}} }, _currentDirection{ Direction::NONE }, _gameState{ GameState::PAUSE }
+	explicit Game() : _snake{ RandomSnakeDefaultPosition() }, _spawnDirection{ }, _currentDirection { }, _gameState{ GameState::PAUSE },
+		_isRunning{ true }, _hasFirstInput{ false }
 	{
 		if (!CheckBounds(_snake.GetPosition(HEAD)))
 		{
 			std::cerr << "Not gud position\n";
-			_snake.SetAllPositions({ {2, 10}, {2, 11} });
 		}
-	}
-
-	Direction RandomDirection()
-	{
-		std::random_device dev;
-		std::mt19937 rng(dev());
-
-		std::uniform_int_distribution<int> distrib(static_cast<int>(Direction::UP), static_cast<int>(Direction::RIGHT));
-
-		return static_cast<Direction>(distrib(rng));
 	}
 
 	bool CheckBounds(const Position& pos)
@@ -278,15 +231,60 @@ public:
 		return true;
 	}
 
-	Position RandomPosition()
+	Direction RandomDirection()
 	{
 		std::random_device dev;
 		std::mt19937 rng(dev());
 
-		std::uniform_int_distribution<int> distX(2, _map.GetWidth() - 3);
-		std::uniform_int_distribution<int> distY(2, _map.GetHeight() - 3);
+		std::uniform_int_distribution<int> distrib(static_cast<int>(Direction::UP), static_cast<int>(Direction::RIGHT));
+
+		return static_cast<Direction>(distrib(rng));
+	}
+
+	Position RandomHeadPosition()
+	{
+		std::random_device dev;
+		std::mt19937 rng(dev());
+
+		std::uniform_int_distribution<int> distX(3, _map.GetWidth() - 4);
+		std::uniform_int_distribution<int> distY(3, _map.GetHeight() - 4);
 
 		return { distX(rng), distY(rng) };
+	}
+
+	std::vector<Position> RandomSnakeDefaultPosition()
+	{
+		Position head = RandomHeadPosition();
+		Position bodyP1{}, bodyP2{};
+		_spawnDirection = RandomDirection();
+
+		switch (_spawnDirection)
+		{
+		case Direction::UP:
+			bodyP1 = { head.x, head.y + 1 };
+			bodyP2 = { head.x, head.y + 2 };
+			break;
+		case Direction::DOWN:
+			bodyP1 = { head.x, head.y - 1 };
+			bodyP2 = { head.x, head.y - 2 };
+			break;
+		case Direction::LEFT:
+			bodyP1 = { head.x + 1, head.y };
+			bodyP2 = { head.x + 2, head.y };
+			break;
+		case Direction::RIGHT:
+			bodyP1 = { head.x - 1, head.y };
+			bodyP2 = { head.x - 2, head.y };
+			break;
+		default:
+			bodyP1 = { head.x, head.y + 1 };
+			bodyP2 = { head.x, head.y + 2 };
+			break;
+		}
+
+		_currentDirection = _spawnDirection;
+		_hasFirstInput = false;
+		return { head, bodyP1, bodyP2 };
 	}
 
 	bool IsOppositeDirection(Direction curr, Direction newDir)
@@ -297,40 +295,90 @@ public:
 			curr == Direction::RIGHT && newDir == Direction::LEFT);
 	}
 
+	void HandlePlayingInputStates(char input)
+	{
+		if (input == 'p')
+		{
+			_gameState = GameState::PAUSE;
+			return;
+		}
+
+		if (input == 'r')
+		{
+			_gameState = GameState::RESTART;
+			return;
+		}
+
+		Direction newDirection = _currentDirection;
+		switch (input)
+		{
+		case 'w':
+			newDirection = Direction::UP;
+			break;
+		case 's':
+			newDirection = Direction::DOWN;
+			break;
+		case 'a':
+			newDirection = Direction::LEFT;
+			break;
+		case 'd':
+			newDirection = Direction::RIGHT;
+			break;
+		}
+
+		if (!_hasFirstInput)
+		{
+			if (!IsOppositeDirection(_spawnDirection, newDirection))
+			{
+				_currentDirection = newDirection;
+				_hasFirstInput = true;
+			}
+		}
+		else
+		{
+			if (!IsOppositeDirection(_currentDirection, newDirection))
+				_currentDirection = newDirection;
+		}
+	}
+
 	void ProcessInput()
 	{
 		if (_kbhit())
 		{
-			char input = _getch();
-			Direction newDirection = _currentDirection;
+			static auto lastInputTime = std::chrono::steady_clock::now();
+			auto now = std::chrono::steady_clock::now();
 
-			switch (input)
+			if (_gameState != GameState::PLAYING && std::chrono::duration<double>(now - lastInputTime).count() < 0.1)
+				return;
+
+			char input = _getch();
+			lastInputTime = now;
+
+			if (input == 'q')
 			{
-			case 'w':
-				newDirection = Direction::UP;
-				break;
-			case 's':
-				newDirection = Direction::DOWN;
-				break;
-			case 'a':
-				newDirection = Direction::LEFT;
-				break;
-			case 'd':
-				newDirection = Direction::RIGHT;
-				break;
-			case 'p':
-				_gameState = (_gameState == GameState::PLAYING ? GameState::PAUSE : GameState::PLAYING);
-				break;
-			case 'q':
 				_isRunning = false;
-				break;
-			case 'r':
-				_gameState = GameState::RESTART;
-				break;
+				return;
 			}
 
-			if (!IsOppositeDirection(_currentDirection, newDirection))
-				_currentDirection = newDirection;
+			switch (_gameState)
+			{
+			case GameState::PLAYING:
+				HandlePlayingInputStates(input);
+				break;
+			case GameState::PAUSE:
+				if (input == 13)
+					_gameState = GameState::PLAYING;
+				break;
+			case GameState::GAME_OVER:
+				if (input == 'r')
+					RestartGame();
+				break;
+			case GameState::RESTART:
+				_hasFirstInput = false;
+				break;
+			default:
+				break;
+			}
 		}
 	}
 
@@ -367,27 +415,32 @@ public:
 			break;
 		}
 
-		if (_snake.GetAllPositions().size() > 2)
+		if (_snake.GetAllPositions().size() > DEFAULT_SNAKE_LENGTH)
 			_snake.RemoveTail();
 	}
 
 	void GameOver()
 	{
 		_gameState = GameState::GAME_OVER;
+		_hasFirstInput = false;
 	}
 
 	void RestartGame()
 	{
 		_gameState = GameState::PAUSE;
-		_currentDirection = Direction::NONE;
-		_snake.ResetPositions();
-
-		Position headPos = RandomPosition();
-		_snake.SetAllPositions({ headPos, {headPos.x, headPos.y + 1} });
+		_hasFirstInput = false;
+		_snake.ClearPositions();
+		_snake.SetAllPositions(RandomSnakeDefaultPosition());
 	}
 
 	void UpdateGameplay(double dt)
 	{
+		if (_gameState != GameState::PLAYING)
+			return;
+
+		if (!_hasFirstInput && _spawnDirection == _currentDirection)
+			return;
+
 		static double moveTimer = 0.0;
 		moveTimer += dt;
 
@@ -423,53 +476,50 @@ public:
 
 	void Render()
 	{
-		static bool initialDraw = true;
+		std::string buffer;
+		buffer.reserve(1024);
+		buffer += "\033[?25l";
+
 		if (_gameState == GameState::GAME_OVER)
 		{
-			std::string buffer;
 			buffer += "\033[2J\033[H";
 			PrintMap(_map.GetGameOverMap(), buffer);
 			std::cout << buffer << std::flush;
-			initialDraw = true;
 			return;
 		}
 
 		if (_gameState == GameState::PAUSE)
 		{
-			std::string buffer;
 			buffer += "\033[2J\033[H";
 			PrintMap(_map.GetGameMenuMap(), buffer);
 			std::cout << buffer << std::flush;
-			initialDraw = true;
 			return;
 		}
 
-		if (initialDraw)
+		if (!_hasFirstInput)
 		{
-			std::string buffer;
 			buffer += "\033[2J\033[H";
 			PrintMap(_map.GetMap(), buffer);
-			std::cout << buffer << std::flush;
+
 			for (int i = 0; i < _snake.GetAllPositions().size(); i++)
-				std::cout << "\033[" << _snake.GetPosition(i).y + 1 << ";" << _snake.GetPosition(i).x + 1 << "H" << (i == HEAD ? "S" : "T");
-			initialDraw = false;
-			std::cout << std::flush;
+				buffer += "\033[" + std::to_string(_snake.GetPosition(i).y + 1) + ";" + 
+					std::to_string(_snake.GetPosition(i).x + 1) + "H" + (i == HEAD ? "S" : "T");
 		}
 		else
 		{
+			buffer += "\033[2J\033[H";
+			PrintMap(_map.GetMap(), buffer);
+
 			// erase old tail position
-			if (_currentDirection != Direction::NONE)
-				std::cout << "\033[" << _oldTailPosition.y + 1 << ";" << _oldTailPosition.x + 1 << "H" << " ";
+			buffer += "\033[" + std::to_string(_oldTailPosition.y + 1) + ";" + std::to_string(_oldTailPosition.x + 1) + "H" + " ";
 
-			for (int i = 1; i < _snake.GetAllPositions().size(); i++)
-				std::cout << "\033[" << _snake.GetPosition(1).y + 1 << ";" << _snake.GetPosition(1).x + 1 << "H" << "T";
-
-			std::cout << "\033[" << _snake.GetPosition(HEAD).y + 1 << ";" << _snake.GetPosition(HEAD).x + 1 << "H" << "S";
-			std::cout << std::flush;
+			for (int i = 0; i < _snake.GetAllPositions().size(); i++)
+				buffer += "\033[" + std::to_string(_snake.GetPosition(i).y + 1) + ";" + std::to_string(_snake.GetPosition(i).x + 1) + "H" + (i == HEAD ? "S" : "T");
 		}
 
 		// set cursor at the bottom to avoid text overwriting
-		std::cout << "\033[" << _map.GetHeight() + 2 << ";1H";
+		buffer += "\033[" + std::to_string(_map.GetHeight() + 2) + ";1H";
+		std::cout << buffer << std::flush;
 	}
 	
 	void Run()
