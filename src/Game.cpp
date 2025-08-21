@@ -12,8 +12,7 @@ constexpr double TARGET_FRAME_TIME = 1.0 / 60.0;
 constexpr int DEFAULT_SNAKE_LENGTH = 3;
 constexpr int HEAD = 0;
 
-Game::Game() : _currentDirection{ RandomDirection() }, _snake{ RandomSnakeDefaultPosition() }, _gameState { GameState::PAUSE },
-_isRunning{ true }, _hasFirstInput{ false }, _moveTimer{ 0.0 }, _oldTailPosition{ _snake.GetTail() }
+Game::Game() : _currentDirection{ RandomDirection() }, _snake{ RandomSnakeDefaultPosition() }, _oldTailPosition{ _snake.GetTail() }
 {
 	for (const auto& pos : _snake.GetBodyPositions())
 	{

@@ -9,19 +9,8 @@
 
 class Game
 {
-private:
-	Map _map;
-	GameState _gameState;
-	Direction _currentDirection;
-	Snake _snake;
-
-	bool _hasFirstInput;
-	bool _isRunning;
-	Position _oldTailPosition;
-	double _moveTimer;
-
 public:
-	explicit Game();
+	Game();
 
 	bool CheckBounds(const Position& pos);
 	Direction RandomDirection();
@@ -41,6 +30,17 @@ public:
 	void Update(double deltaTime);
 	void Render();
 	void Run();
+
+private:
+	Map _map{};
+	GameState _gameState{ GameState::PAUSE };
+	Direction _currentDirection{};
+	Snake _snake{ std::vector<Position>({{1, 1}, {1, 2}, {1, 3}, {1, 4}}) };
+
+	bool _hasFirstInput{ false };
+	bool _isRunning{ true };
+	Position _oldTailPosition{};
+	double _moveTimer{ 0.0 };
 };
 
 #endif

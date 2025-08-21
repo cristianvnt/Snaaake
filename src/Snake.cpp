@@ -16,12 +16,12 @@ bool Snake::CheckSelfCollision(const Position& newHeadPos) const
 	return false;
 }
 
-Position Snake::GetHead()
+Position Snake::GetHead() const
 {
 	return _pos.front();
 }
 
-Position Snake::GetTail()
+Position Snake::GetTail() const
 {
 	return _pos.back();
 }
@@ -37,7 +37,7 @@ void Snake::ClearPositions()
 		_pos.clear();
 }
 
-const std::vector<Position> Snake::GetBodyPositions() const
+const std::vector<Position>& Snake::GetBodyPositions() const
 {
 	return _pos;
 }
