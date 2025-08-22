@@ -53,7 +53,7 @@ void Snake::SetBodyPositions(const std::vector<Position>& pos)
 		_pos.push_back(bp);
 }
 
-void Snake::SetPosition(int p, const Position pos)
+void Snake::SetPosition(int p, const Position& pos)
 {
 	_pos[p].x = pos.x;
 	_pos[p].y = pos.y;

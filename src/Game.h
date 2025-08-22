@@ -18,6 +18,7 @@ public:
 	std::vector<Position> RandomSnakeDefaultPosition();
 	bool IsOppositeDirection(Direction curr, Direction newDir);
 	Position GetNextHeadPosition(Direction dir);
+
 	void HandlePlayingInputStates(char input);
 	void ProcessInput();
 	bool IsRunning() const;

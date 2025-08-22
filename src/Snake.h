@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "Position.h"
+#include <utility>
 
 class Snake
 {
@@ -25,7 +26,7 @@ public:
 	const std::vector<Position>& GetBodyPositions() const;
 	Position GetPosition(int p);
 	void SetBodyPositions(const std::vector<Position>& pos);
-	void SetPosition(int p, const Position pos);
+	void SetPosition(int p, const Position& pos);
 	void Move();
 
 private:
