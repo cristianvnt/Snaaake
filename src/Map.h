@@ -4,13 +4,12 @@
 #include <array>
 #include <string_view>
 
+#include "Constants.h"
+
 class Map
 {
 public:
-	static constexpr int WIDTH = 50;
-	static constexpr int HEIGHT = 25;
-
-	static constexpr std::array<std::string_view, HEIGHT> MAP = 
+	static constexpr std::array<std::string_view, C::MAP_HEIGHT> MAP = 
 	{
 		"##################################################",
 		"#                                                #",
@@ -39,7 +38,7 @@ public:
 		"##################################################"
 	};
 
-	static constexpr std::array<std::string_view, HEIGHT> GAME_OVER_MAP =
+	static constexpr std::array<std::string_view, C::MAP_HEIGHT> GAME_OVER_MAP =
 	{
 		"##################################################",
 		"#                                                #",
@@ -68,7 +67,7 @@ public:
 		"##################################################"
 	};
 
-	static constexpr std::array<std::string_view, HEIGHT> GAME_MENU_MAP =
+	static constexpr std::array<std::string_view, C::MAP_HEIGHT> GAME_MENU_MAP =
 	{
 		"##################################################",
 		"#                                                #",

@@ -9,15 +9,12 @@
 #include <conio.h>
 #include <random>
 
-constexpr double TARGET_FRAME_TIME = 1.0 / 60.0;
-constexpr int DEFAULT_SNAKE_LENGTH = 3;
-constexpr int HEAD = 0;
-
-Game::Game() : _currentDirection{ RandomDirection() }, _snake{ RandomSnakeDefaultPosition() }, _oldTailPosition{ _snake.GetTail() }
+Game::Game() : _currentDirection{ RandomDirection() }, _snake{ RandomSnakeDefaultPosition() }, 
+	_oldTailPosition{ _snake.GetTail() }, _food{ RandomFoodPosition() }
 {
 	for (const auto& pos : _snake.GetBodyPositions())
 	{
-		if (!CheckBounds(_snake.GetPosition(HEAD)))
+		if (!CheckBounds(_snake.GetPosition(C::HEAD)))
 		{
 			std::cerr << "Not gud position\n";
 			_gameState = GameState::GAME_OVER;
@@ -26,12 +23,41 @@ Game::Game() : _currentDirection{ RandomDirection() }, _snake{ RandomSnakeDefaul
 	}
 }
 
+Position Game::RandomFoodPosition()
+{
+	std::random_device dev;
+	std::mt19937 rng(dev());
+
+	std::uniform_int_distribution<int> distX(1, C::MAP_WIDTH - 2);
+	std::uniform_int_distribution<int> distY(1, C::MAP_HEIGHT - 2);
+
+	Position foodPos{};
+	bool validFoodPos = false;
+
+	while (!validFoodPos)
+	{
+		foodPos = { distX(rng), distY(rng) };
+		validFoodPos = true;
+
+		for (const auto& pos : _snake.GetBodyPositions())
+		{
+			if (pos == foodPos)
+			{
+				validFoodPos = false;
+				break;
+			}
+		}
+	}
+
+	return foodPos;
+}
+
 bool Game::CheckBounds(const Position& pos)
 {
-	if (pos.x < 1 || pos.x > Map::WIDTH - 2)
+	if (pos.x < 1 || pos.x > C::MAP_WIDTH - 2)
 		return false;
 
-	if (pos.y < 1 || pos.y > Map::HEIGHT - 2)
+	if (pos.y < 1 || pos.y > C::MAP_HEIGHT - 2)
 		return false;
 
 	return true;
@@ -52,8 +78,8 @@ Position Game::RandomHeadPosition()
 	std::random_device dev;
 	std::mt19937 rng(dev());
 
-	std::uniform_int_distribution<int> distX(5, Map::WIDTH - 5);
-	std::uniform_int_distribution<int> distY(5, Map::HEIGHT - 5);
+	std::uniform_int_distribution<int> distX(C::MARGIN, C::MAP_WIDTH - C::MARGIN);
+	std::uniform_int_distribution<int> distY(C::MARGIN, C::MAP_HEIGHT - C::MARGIN);
 
 	return { distX(rng), distY(rng) };
 }
@@ -67,19 +93,19 @@ std::vector<Position> Game::RandomSnakeDefaultPosition()
 	switch (_currentDirection)
 	{
 	case Direction::UP:
-		for (int i = 1; i <= DEFAULT_SNAKE_LENGTH; i++)
+		for (int i = 1; i <= C::SNAKE_DEF_LEN; i++)
 			defaultBody.push_back({ head.x, head.y + i });
 		break;
 	case Direction::DOWN:
-		for (int i = 1; i <= DEFAULT_SNAKE_LENGTH; i++)
+		for (int i = 1; i <= C::SNAKE_DEF_LEN; i++)
 			defaultBody.push_back({ head.x, head.y - i });
 		break;
 	case Direction::LEFT:
-		for (int i = 1; i <= DEFAULT_SNAKE_LENGTH; i++)
+		for (int i = 1; i <= C::SNAKE_DEF_LEN; i++)
 			defaultBody.push_back({ head.x + i, head.y });
 		break;
 	case Direction::RIGHT:
-		for (int i = 1; i <= DEFAULT_SNAKE_LENGTH; i++)
+		for (int i = 1; i <= C::SNAKE_DEF_LEN; i++)
 			defaultBody.push_back({ head.x - i, head.y });
 		break;
 	}
@@ -164,6 +190,8 @@ void Game::HandlePlayingInputStates(char input)
 
 void Game::ProcessInput()
 {
+	// windows specific
+	// checks if keyboard was pressed
 	if (_kbhit())
 	{
 		static auto lastInputTime = std::chrono::steady_clock::now();
@@ -172,6 +200,7 @@ void Game::ProcessInput()
 		if (_gameState != GameState::PLAYING && std::chrono::duration<double>(now - lastInputTime).count() < 0.1)
 			return;
 
+		// gets the key pressed w/o echo
 		char input = _getch();
 		lastInputTime = now;
 
@@ -221,7 +250,7 @@ bool Game::MoveSnake()
 
 	_snake.Move();
 
-	_snake.SetPosition(HEAD, newHead);
+	_snake.SetPosition(C::HEAD, newHead);
 
 	return true;
 }
@@ -239,6 +268,7 @@ void Game::RestartGame()
 	_moveTimer = 0.0;
 	_snake.ClearPositions();
 	_snake.SetBodyPositions(RandomSnakeDefaultPosition());
+	_food.SetPosition(RandomFoodPosition());
 }
 
 void Game::UpdateGameplay(double dt)
@@ -249,9 +279,12 @@ void Game::UpdateGameplay(double dt)
 	if (!_hasFirstInput)
 		return;
 
+	if (_snake.GetHead() == _food.GetPosition())
+		_food.SetPosition(RandomFoodPosition());
+
 	_moveTimer += dt;
 
-	if (_moveTimer >= 0.15)
+	if (_moveTimer >= C::MOVE_DELAY)
 	{
 		if (!MoveSnake())
 			_gameState = GameState::GAME_OVER;
@@ -275,14 +308,16 @@ void Game::Update(double deltaTime)
 	}
 }
 
-void Game::PrintMap(const std::array<std::string_view, Map::HEIGHT>& map, std::ostringstream& buffer)
+void Game::PrintMap(const std::array<std::string_view, C::MAP_HEIGHT>& map, std::ostringstream& buffer)
 {
-	for (auto& line : map)
+	for (const auto& line : map)
 		buffer << line << '\n';
 }
 
 void Game::Render()
 {
+	// ansi codes to clear screen, make cursor invisible, 
+	// move cursor below map for FPS counter so it doesnt overlap
 	std::ostringstream buffer;
 	buffer << "\033[?25l";
 	buffer << "\033[2J\033[H";
@@ -306,10 +341,14 @@ void Game::Render()
 	PrintMap(Map::MAP, buffer);
 
 	const auto& bodyPos = _snake.GetBodyPositions();
-	for (size_t i = 0; i < bodyPos.size(); i++)
-		buffer << "\033[" << (bodyPos[i].y + 1) << ";" << (bodyPos[i].x + 1) << "H" << (i == HEAD ? "S" : "T");
+	const auto& foodPos = _food.GetPosition();
 
-	buffer << "\033[" + std::to_string(Map::HEIGHT + 2) + ";1H";
+	for (size_t i = 0; i < bodyPos.size(); i++)
+		buffer << "\033[" << (bodyPos[i].y + 1) << ";" << (bodyPos[i].x + 1) << "H" << (i == C::HEAD ? C::SNAKE_HEAD : C::SNAKE_TAIL);
+
+	buffer << "\033[" << (foodPos.y + 1) << ";" << (foodPos.x + 1) << "H" << C::FOOD;
+
+	buffer << "\033[" << (C::MAP_HEIGHT + 2) << ";1H";
 	std::cout << buffer.str() << std::flush;
 }
 
@@ -340,7 +379,7 @@ void Game::Run()
 		}
 
 		const auto elapsed = std::chrono::high_resolution_clock::now() - currentTime;
-		auto targetFrameTime = std::chrono::duration<double>(TARGET_FRAME_TIME);
+		auto targetFrameTime = std::chrono::duration<double>(C::FRAME_TIME);
 		if (elapsed < targetFrameTime)
 			std::this_thread::sleep_for(targetFrameTime - elapsed);
 	}
