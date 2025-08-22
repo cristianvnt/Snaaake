@@ -26,14 +26,13 @@ public:
 	void GameOver();
 	void RestartGame();
 	void UpdateGameplay(double dt);
-	void PrintMap(const std::vector<std::string>& map, std::string& buffer);
+	void PrintMap(const std::array<std::string_view, Map::HEIGHT>& map, std::ostringstream& buffer);
 
 	void Update(double deltaTime);
 	void Render();
 	void Run();
 
 private:
-	Map _map{};
 	GameState _gameState{ GameState::PAUSE };
 	Direction _currentDirection{};
 	Snake _snake{ std::vector<Position>({{1, 1}, {1, 2}, {1, 3}, {1, 4}}) };

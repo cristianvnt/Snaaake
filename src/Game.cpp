@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <chrono>
 #include <thread>
 #include <vector>
@@ -27,10 +28,10 @@ Game::Game() : _currentDirection{ RandomDirection() }, _snake{ RandomSnakeDefaul
 
 bool Game::CheckBounds(const Position& pos)
 {
-	if (pos.x < 1 || pos.x > _map.GetWidth() - 2)
+	if (pos.x < 1 || pos.x > Map::WIDTH - 2)
 		return false;
 
-	if (pos.y < 1 || pos.y > _map.GetHeight() - 2)
+	if (pos.y < 1 || pos.y > Map::HEIGHT - 2)
 		return false;
 
 	return true;
@@ -51,8 +52,8 @@ Position Game::RandomHeadPosition()
 	std::random_device dev;
 	std::mt19937 rng(dev());
 
-	std::uniform_int_distribution<int> distX(5, _map.GetWidth() - 5);
-	std::uniform_int_distribution<int> distY(5, _map.GetHeight() - 5);
+	std::uniform_int_distribution<int> distX(5, Map::WIDTH - 5);
+	std::uniform_int_distribution<int> distY(5, Map::HEIGHT - 5);
 
 	return { distX(rng), distY(rng) };
 }
@@ -274,44 +275,42 @@ void Game::Update(double deltaTime)
 	}
 }
 
-void Game::PrintMap(const std::vector<std::string>& map, std::string& buffer)
+void Game::PrintMap(const std::array<std::string_view, Map::HEIGHT>& map, std::ostringstream& buffer)
 {
 	for (auto& line : map)
-		buffer += line + '\n';
+		buffer << line << '\n';
 }
 
 void Game::Render()
 {
-	std::string buffer;
-	buffer.reserve(1024);
-	buffer += "\033[?25l";
-	buffer += "\033[2J\033[H";
+	std::ostringstream buffer;
+	buffer << "\033[?25l";
+	buffer << "\033[2J\033[H";
 
 	if (_gameState == GameState::GAME_OVER)
 	{
-		buffer += "\033[2J\033[H";
-		PrintMap(_map.GetGameOverMap(), buffer);
-		std::cout << buffer << std::flush;
+		buffer << "\033[2J\033[H";
+		PrintMap(Map::GAME_OVER_MAP, buffer);
+		std::cout << buffer.str() << std::flush;
 		return;
 	}
 
 	if (_gameState == GameState::PAUSE)
 	{
 
-		PrintMap(_map.GetGameMenuMap(), buffer);
-		std::cout << buffer << std::flush;
+		PrintMap(Map::GAME_MENU_MAP, buffer);
+		std::cout << buffer.str() << std::flush;
 		return;
 	}
 
-	PrintMap(_map.GetMap(), buffer);
+	PrintMap(Map::MAP, buffer);
 
 	const auto& bodyPos = _snake.GetBodyPositions();
 	for (size_t i = 0; i < bodyPos.size(); i++)
-		buffer += "\033[" + std::to_string(bodyPos[i].y + 1) + ";" +
-		std::to_string(bodyPos[i].x + 1) + "H" + (i == HEAD ? "S" : "T");
+		buffer << "\033[" << (bodyPos[i].y + 1) << ";" << (bodyPos[i].x + 1) << "H" << (i == HEAD ? "S" : "T");
 
-	buffer += "\033[" + std::to_string(_map.GetHeight() + 2) + ";1H";
-	std::cout << buffer << std::flush;
+	buffer << "\033[" + std::to_string(Map::HEIGHT + 2) + ";1H";
+	std::cout << buffer.str() << std::flush;
 }
 
 void Game::Run()

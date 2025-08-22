@@ -1,24 +1,101 @@
 #ifndef MAP_H
 #define MAP_H
 
-#include <vector>
-#include <string>
+#include <array>
+#include <string_view>
 
 class Map
 {
 public:
-	Map();
+	static constexpr int WIDTH = 50;
+	static constexpr int HEIGHT = 25;
 
-	std::vector<std::string>& GetMap() { return _map; }
-	std::vector<std::string>& GetGameOverMap() { return _gameOverMap; }
-	std::vector<std::string>& GetGameMenuMap() { return _gameMenuMap; }
-	int GetWidth() const { return static_cast<int>(_map[0].size()); }
-	int GetHeight() const { return static_cast<int>(_map.size()); }
+	static constexpr std::array<std::string_view, HEIGHT> MAP = 
+	{
+		"##################################################",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"##################################################"
+	};
 
-private:
-	std::vector<std::string> _map;
-	std::vector<std::string> _gameOverMap;
-	std::vector<std::string> _gameMenuMap;
+	static constexpr std::array<std::string_view, HEIGHT> GAME_OVER_MAP =
+	{
+		"##################################################",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                   GAME OVER                    #",
+		"#               Press R to Restart               #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"##################################################"
+	};
+
+	static constexpr std::array<std::string_view, HEIGHT> GAME_MENU_MAP =
+	{
+		"##################################################",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                   START GAME                   #",
+		"#            Press ENTER to START GAME           #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"#                                                #",
+		"##################################################"
+	};
 };
 
 #endif
