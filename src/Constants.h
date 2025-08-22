@@ -14,6 +14,7 @@ namespace C
 	constexpr double MOVE_DELAY = 0.15;
 	constexpr int HEAD = 0;
 	constexpr int MARGIN = 5;
+	constexpr int PTS = 10;
 
 	// symbols
 	constexpr char SNAKE_HEAD = 'S';

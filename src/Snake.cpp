@@ -26,6 +26,11 @@ Position Snake::GetTail() const
 	return _pos.back();
 }
 
+void Snake::Grow()
+{
+	_pos.push_back(_pos.back());
+}
+
 void Snake::RemoveTail()
 {
 	_pos.pop_back();

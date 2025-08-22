@@ -21,6 +21,7 @@ public:
 	bool CheckSelfCollision(const Position& newHeadPos) const;
 	Position GetHead() const;
 	Position GetTail() const;
+	void Grow();
 	void RemoveTail();
 	void ClearPositions();
 	const std::vector<Position>& GetBodyPositions() const;

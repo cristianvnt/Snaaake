@@ -14,7 +14,6 @@ public:
 	Game();
 
 	// food
-	void SpawnFood();
 	Position RandomFoodPosition();
 
 	bool CheckBounds(const Position& pos);
@@ -24,10 +23,11 @@ public:
 	bool IsOppositeDirection(Direction curr, Direction newDir);
 	Position GetNextHeadPosition(Direction dir);
 
+	bool MoveSnake();
+
 	void HandlePlayingInputStates(char input);
 	void ProcessInput();
 	bool IsRunning() const;
-	bool MoveSnake();
 	void GameOver();
 	void RestartGame();
 	void UpdateGameplay(double dt);
@@ -47,6 +47,8 @@ private:
 	bool _isRunning{ true };
 	Position _oldTailPosition{};
 	double _moveTimer{ 0.0 };
+	int _score{ 0 };
+	double _fps{ 0.0 };
 };
 
 #endif

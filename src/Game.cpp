@@ -10,7 +10,7 @@
 #include <random>
 
 Game::Game() : _currentDirection{ RandomDirection() }, _snake{ RandomSnakeDefaultPosition() }, 
-	_oldTailPosition{ _snake.GetTail() }, _food{ RandomFoodPosition() }
+_oldTailPosition{ _snake.GetTail() }, _food{ RandomFoodPosition() }
 {
 	for (const auto& pos : _snake.GetBodyPositions())
 	{
@@ -240,10 +240,7 @@ bool Game::MoveSnake()
 {
 	Position newHead = GetNextHeadPosition(_currentDirection);
 
-	if (!CheckBounds(newHead))
-		return false;
-
-	if (_snake.CheckSelfCollision(newHead))
+	if (!CheckBounds(newHead) || _snake.CheckSelfCollision(newHead))
 		return false;
 
 	_oldTailPosition = _snake.GetTail();
@@ -259,6 +256,7 @@ void Game::GameOver()
 {
 	_gameState = GameState::GAME_OVER;
 	_hasFirstInput = false;
+	_score = 0;
 }
 
 void Game::RestartGame()
@@ -266,6 +264,7 @@ void Game::RestartGame()
 	_gameState = GameState::PAUSE;
 	_hasFirstInput = false;
 	_moveTimer = 0.0;
+	_score = 0;
 	_snake.ClearPositions();
 	_snake.SetBodyPositions(RandomSnakeDefaultPosition());
 	_food.SetPosition(RandomFoodPosition());
@@ -279,13 +278,17 @@ void Game::UpdateGameplay(double dt)
 	if (!_hasFirstInput)
 		return;
 
-	if (_snake.GetHead() == _food.GetPosition())
-		_food.SetPosition(RandomFoodPosition());
-
 	_moveTimer += dt;
 
 	if (_moveTimer >= C::MOVE_DELAY)
 	{
+		if (_snake.GetHead() == _food.GetPosition())
+		{
+			_food.SetPosition(RandomFoodPosition());
+			_snake.Grow();
+			_score += C::PTS;
+		}
+
 		if (!MoveSnake())
 			_gameState = GameState::GAME_OVER;
 
@@ -348,7 +351,12 @@ void Game::Render()
 
 	buffer << "\033[" << (foodPos.y + 1) << ";" << (foodPos.x + 1) << "H" << C::FOOD;
 
+	buffer << "\033[" << (C::MAP_HEIGHT + 1) << ";1H";
+	buffer << "Score: " << _score << " ";
+
 	buffer << "\033[" << (C::MAP_HEIGHT + 2) << ";1H";
+	buffer << "FPS: " << _fps;
+
 	std::cout << buffer.str() << std::flush;
 }
 
@@ -369,11 +377,11 @@ void Game::Run()
 		Render();
 
 		timeAccumulated += deltaTime;
-		frameCount++;
+		frameCount++; 
 
-		if (timeAccumulated >= 0.5)
+		if (timeAccumulated >= 0.01)
 		{
-			std::cout << "\rFPS: " << static_cast<double>(frameCount) / timeAccumulated << std::flush;
+			_fps = static_cast<double>(frameCount) / timeAccumulated;
 			frameCount = 0;
 			timeAccumulated = 0.0;
 		}
